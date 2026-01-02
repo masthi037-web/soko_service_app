@@ -42,7 +42,9 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     const HomeHeader(),
                     const SizedBox(height: 16),
-                    const CustomSearchBar(),
+                    CustomSearchBar(
+                      onChanged: (value) => controller.searchStores(value),
+                    ),
                     const SizedBox(height: 24),
                     CategoryList(categories: controller.categories),
                     const SizedBox(height: 24),
@@ -64,7 +66,7 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 24),
                     _buildSectionHeader('Trusted Stores', () {}),
                     const SizedBox(height: 12),
-                    TrustedStoresGrid(stores: controller.stores),
+                    TrustedStoresGrid(stores: controller.filteredStores),
                   ],
                 );
               },

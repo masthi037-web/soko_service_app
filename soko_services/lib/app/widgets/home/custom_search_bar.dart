@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class CustomSearchBar extends StatelessWidget {
-  const CustomSearchBar({super.key});
+  final ValueChanged<String>? onChanged;
+
+  const CustomSearchBar({super.key, this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -14,16 +16,23 @@ class CustomSearchBar extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.search, color: Colors.grey),
-                SizedBox(width: 12),
+                const Icon(Icons.search, color: Colors.grey),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    'Search candles, pottery...',
-                    style: TextStyle(color: Colors.grey),
+                  child: TextField(
+                    onChanged: onChanged,
+                    decoration: const InputDecoration(
+                      hintText: 'Search candles, pottery...',
+                      hintStyle: TextStyle(color: Colors.grey),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
+                    ),
+                    style: const TextStyle(color: Colors.black87, fontSize: 16),
                   ),
                 ),
               ],
@@ -37,7 +46,7 @@ class CustomSearchBar extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
           ),
           child: const Icon(Icons.tune, color: Colors.black87),
         ),

@@ -4,7 +4,7 @@ class Company {
   String? companyPhone;
   String? companyEmail;
   String? ownerName;
-  Null? companyStatus;
+  Null companyStatus;
   String? gstNumber;
   String? logo;
   String? banner;

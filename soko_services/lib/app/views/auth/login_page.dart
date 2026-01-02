@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../home/home_page.dart';
@@ -11,7 +12,8 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
   bool _otpSent = false;
@@ -20,11 +22,29 @@ class _LoginPageState extends State<LoginPage> {
   int _secondsRemaining = 0;
   Timer? _timer;
 
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    );
+    _fadeController.forward();
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
     _phoneController.dispose();
     _otpController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -56,18 +76,20 @@ class _LoginPageState extends State<LoginPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: 24),
-        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
+        duration: const Duration(seconds: 3),
         content: Center(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isError ? Colors.red.shade600 : const Color(0xFF006D5B),
-              borderRadius: BorderRadius.circular(30),
+              color: isError
+                  ? const Color(0xFFD32F2F)
+                  : const Color(0xFF00695C),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 8,
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
@@ -76,17 +98,19 @@ class _LoginPageState extends State<LoginPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  isError ? Icons.error_outline : Icons.check_circle_outline,
-                  size: 16,
+                  isError ? Icons.error_rounded : Icons.check_circle_rounded,
+                  size: 20,
                   color: Colors.white,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  message,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -124,12 +148,18 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    // Dismiss keyboard
+    FocusScope.of(context).unfocus();
+
     final success = await authController.sendOtp(phone);
     if (success) {
       _startTimer();
       setState(() {
         _otpSent = true;
       });
+      _fadeController.reset();
+      _fadeController.forward();
+
       if (mounted) {
         _showCustomSnackBar(context, 'OTP Sent Successfully');
       }
@@ -153,6 +183,9 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    // Dismiss keyboard
+    FocusScope.of(context).unfocus();
+
     final success = await context.read<AuthController>().login(phone, otp);
     if (success) {
       if (mounted) {
@@ -171,327 +204,437 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final isLoading = context.watch<AuthController>().isLoading;
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: SingleChildScrollView(
+        // Important for small screens & keyboard safety
+        child: SizedBox(
+          height: size.height,
+          child: Stack(
             children: [
-              // Logo Placeholder
-              const Center(
-                child: Icon(
-                  Icons.store_mall_directory_rounded,
-                  size: 80,
-                  color: Colors.teal,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'SOKO',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Discover Unique Brands',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 48),
-
-              if (!_otpSent) ...[
-                const Text(
-                  'MOBILE NUMBER',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+              // --- Background Elements ---
+              Positioned(
+                top: -100,
+                right: -50,
+                child: Container(
+                  width: 300,
+                  height: 300,
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.teal.withValues(alpha: 0.2),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
-                  child: Row(
+                ),
+              ),
+              Positioned(
+                bottom: -50,
+                left: -50,
+                child: Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.tealAccent.withValues(alpha: 0.1),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // --- Main Content ---
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.public, color: Colors.grey, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '+91',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      const Spacer(),
+
+                      // Logo & Header
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.teal.shade50,
+                              ),
+                              child: const Icon(
+                                Icons.store_mall_directory_rounded,
+                                size: 64,
+                                color: Colors.teal,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'SOKO',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.teal.shade900,
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Discover Unique Brands',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '|',
-                        style: TextStyle(color: Colors.grey, fontSize: 24),
+
+                      const SizedBox(height: 60),
+
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.2),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _otpSent
+                            ? _buildOtpSection(isLoading)
+                            : _buildPhoneSection(isLoading),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: '98765 43210',
-                            hintStyle: TextStyle(color: Colors.black12),
-                          ),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
+
+                      const Spacer(),
+
+                      // Footer
+                      const Center(
+                        child: Text(
+                          'Terms of Service & Privacy Policy',
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
                         ),
                       ),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: isLoading ? null : _handleGetOtp,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          'Get OTP',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
-              ] else ...[
-                // OTP Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'ENTER VERIFICATION CODE',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _otpSent = false;
-                          _otpController.clear();
-                        });
-                      },
-                      child: const Text(
-                        'Change Number',
-                        style: TextStyle(
-                          color: Colors.teal,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Custom 6-box OTP Input
-                Stack(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(6, (index) {
-                        final text = _otpController.text;
-                        final char = index < text.length ? text[index] : '';
-                        return Container(
-                          width: 45,
-                          height: 55,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 1.5,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            char,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                    Positioned.fill(
-                      child: TextField(
-                        controller: _otpController,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        onChanged: (value) => setState(() {}),
-                        style: const TextStyle(color: Colors.transparent),
-                        decoration: const InputDecoration(
-                          counterText: "",
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          fillColor: Colors.transparent,
-                          filled: true,
-                        ),
-                        cursorColor: Colors.transparent,
-                        showCursor: false,
-                        enableInteractiveSelection: false,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: isLoading ? null : _handleSubmit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00796B), // Darker Teal
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Submit',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Icon(
-                              Icons.arrow_forward_rounded,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ],
-                        ),
-                ),
-
-                const SizedBox(height: 32),
-                Center(
-                  child: _secondsRemaining > 0
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE0F2F1), // Light Teal Pill
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.timer_outlined,
-                                size: 20,
-                                color: Color(0xFF00796B),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'EXPIRES IN  00:${_secondsRemaining.toString().padLeft(2, '0')}',
-                                style: const TextStyle(
-                                  color: Color(0xFF00796B),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              "Didn't receive code? ",
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 16,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: isLoading ? null : _handleResendOtp,
-                              child: const Text(
-                                'Resend OTP',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
-              const Spacer(),
-              const Center(
-                child: Text(
-                  'Terms of Service & Privacy Policy',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
               ),
-              const SizedBox(height: 16),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPhoneSection(bool isLoading) {
+    return Column(
+      key: const ValueKey('phone_section'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Log in or Sign up',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueGrey.shade900,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade200,
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Phone Number',
+              hintStyle: TextStyle(
+                color: Colors.grey.shade400,
+                fontWeight: FontWeight.normal,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 16, right: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '+91',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal.shade700,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 1,
+                      height: 24,
+                      color: Colors.grey.shade300,
+                    ),
+                  ],
+                ),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 20),
+            ),
+          ),
+        ),
+        const SizedBox(height: 32),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: isLoading ? null : _handleGetOtp,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              elevation: 4,
+              shadowColor: Colors.teal.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: isLoading
+                ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : const Text(
+                    'Get OTP',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOtpSection(bool isLoading) {
+    return Column(
+      key: const ValueKey('otp_section'),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Verification Code',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueGrey.shade900,
+              ),
+            ),
+            TextButton(
+              onPressed: isLoading
+                  ? null
+                  : () {
+                      setState(() {
+                        _otpSent = false;
+                        _otpController.clear();
+                      });
+                    },
+              style: TextButton.styleFrom(foregroundColor: Colors.teal),
+              child: const Text(
+                'Change Number',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'We sent a code to +91 ${_phoneController.text}',
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+        ),
+        const SizedBox(height: 32),
+
+        // 6-digit OTP Box
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(6, (index) {
+                final text = _otpController.text;
+                final char = index < text.length ? text[index] : '';
+                final isFocused = index == text.length;
+
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 48,
+                  height: 60,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isFocused ? Colors.teal : Colors.grey.shade300,
+                      width: isFocused ? 2 : 1,
+                    ),
+                    boxShadow: [
+                      if (isFocused)
+                        BoxShadow(
+                          color: Colors.teal.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                    ],
+                  ),
+                  child: Text(
+                    char,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueGrey.shade900,
+                    ),
+                  ),
+                );
+              }),
+            ),
+            // Invisible Input
+            SizedBox(
+              width: double.infinity,
+              height: 60,
+              child: TextField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (value) => setState(() {}),
+                style: const TextStyle(color: Colors.transparent),
+                decoration: const InputDecoration(
+                  counterText: "",
+                  border: InputBorder.none,
+                ),
+                cursorColor: Colors.transparent,
+                showCursor: false,
+                enableInteractiveSelection: false,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 40),
+
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: isLoading ? null : _handleSubmit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00695C),
+              elevation: 4,
+              shadowColor: const Color(0xFF00695C).withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: isLoading
+                ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Verify & Proceed',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                    ],
+                  ),
+          ),
+        ),
+
+        const SizedBox(height: 30),
+
+        Center(
+          child: _secondsRemaining > 0
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Resend in 00:${_secondsRemaining.toString().padLeft(2, '0')}',
+                    style: TextStyle(
+                      color: Colors.teal.shade700,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                )
+              : TextButton.icon(
+                  onPressed: isLoading ? null : _handleResendOtp,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text(
+                    'Resend Code',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey.shade600,
+                  ),
+                ),
+        ),
+      ],
     );
   }
 }
