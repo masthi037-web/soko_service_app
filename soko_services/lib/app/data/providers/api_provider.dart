@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:get_storage/get_storage.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../../core/values/api_constants.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiProvider {
   late Dio _dio;
-  final _storage = GetStorage();
+  final _storage = const FlutterSecureStorage();
 
   ApiProvider() {
     _dio = Dio();
@@ -36,14 +37,45 @@ class ApiProvider {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          print("Request: ${options.method} ${options.uri}");
+          debugPrint("Request: ${options.method} ${options.uri}");
           // Add Auth Token globally here
-          final token = await _storage.read('accessToken');
-          options.headers['Authorization'] = 'Bearer $token';
+          final token = await _storage.read(key: 'accessToken');
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
           handler.next(options);
         },
-        onError: (error, handler) {
-          print("Error: ${error.message}");
+        onError: (error, handler) async {
+          debugPrint(
+            "Error: ${error.message} Status: ${error.response?.statusCode}",
+          );
+          if (error.response?.statusCode == 401) {
+            // Token might be expired, try to refresh
+            try {
+              final newAccessToken = await _refreshToken();
+              if (newAccessToken != null) {
+                // Update the header with the new token
+                error.requestOptions.headers['Authorization'] =
+                    'Bearer $newAccessToken';
+                // Clone the request with the new headers
+                final opts = Options(
+                  method: error.requestOptions.method,
+                  headers: error.requestOptions.headers,
+                );
+                final cloneReq = await _dio.request(
+                  error.requestOptions.path,
+                  options: opts,
+                  data: error.requestOptions.data,
+                  queryParameters: error.requestOptions.queryParameters,
+                );
+
+                return handler.resolve(cloneReq);
+              }
+            } catch (e) {
+              // Refresh failed, propagate error
+              debugPrint("Token refresh failed: $e");
+            }
+          }
           handler.next(error);
         },
       ),
@@ -187,6 +219,51 @@ class ApiProvider {
         return 'Service Unavailable';
       default:
         return 'Something went wrong';
+    }
+  }
+
+  Future<String?> _refreshToken() async {
+    try {
+      final refreshToken = await _storage.read(key: 'refreshToken');
+      if (refreshToken == null) {
+        return null;
+      }
+
+      // Use a separate Dio instance to avoid interceptor loop
+      final tokenDio = Dio(
+        BaseOptions(
+          baseUrl: _baseUrl,
+          headers: {'Content-Type': ApiConstants.contentType},
+        ),
+      );
+
+      // Log the refresh attempt
+      debugPrint('Refreshing token...');
+
+      final response = await tokenDio.post(
+        '/auth/refresh',
+        data: {'refreshToken': refreshToken},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        final newAccessToken = data['accessToken'];
+        final newRefreshToken = data['refreshToken'];
+        final role = data['role'];
+
+        if (newAccessToken != null) {
+          await _storage.write(key: 'accessToken', value: newAccessToken);
+          await _storage.write(key: 'refreshToken', value: newRefreshToken);
+          await _storage.write(key: 'role', value: role);
+          return newAccessToken;
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error refreshing token: $e');
+      // Ideally clear storage here or handle logout
+      await _storage.deleteAll();
+      return null;
     }
   }
 }

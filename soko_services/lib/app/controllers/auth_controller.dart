@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:soko_services/app/data/repositories/auth_repository.dart';
 
 class AuthController extends ChangeNotifier {
   final AuthRepository _authRepository;
   final _storage = GetStorage();
+  final _secureStorage = const FlutterSecureStorage();
 
-  bool _isLoading = false;
+  bool _isLoggedIn = false; // Internal state request
+
+  bool _isLoading =
+      false; // Set true initially if you want to block UI until check is done
   bool get isLoading => _isLoading;
 
   // Resend Logic
@@ -15,11 +20,11 @@ class AuthController extends ChangeNotifier {
 
   int get resendAttempts => _resendAttempts;
   bool get isBlocked {
-    // if (_blockTime == null) return false;
-    // if (DateTime.now().isAfter(_blockTime!)) {
-    //   _resetResendLogic();
-    //   return false;
-    // }
+    if (_blockTime == null) return false;
+    if (DateTime.now().isAfter(_blockTime!)) {
+      _resetResendLogic();
+      return false;
+    }
     return false;
   }
 
@@ -31,6 +36,17 @@ class AuthController extends ChangeNotifier {
 
   AuthController(this._authRepository) {
     _loadResendState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final loggedInString = await _secureStorage.read(key: 'isLoggedIn');
+    _isLoggedIn = loggedInString == 'true';
+    if (_isLoggedIn) {
+      // Optional: Validate token expiry here if needed
+      debugPrint('User is logged in');
+    }
+    notifyListeners();
   }
 
   void _loadResendState() {
@@ -71,7 +87,7 @@ class AuthController extends ChangeNotifier {
       _storage.write('resendAttempts', _resendAttempts);
 
       if (_resendAttempts >= 3) {
-        _blockTime = DateTime.now().add(const Duration(minutes: 1));
+        _blockTime = DateTime.now().add(const Duration(minutes: 5));
         _storage.write('blockTime', _blockTime!.toIso8601String());
       }
 
@@ -93,10 +109,19 @@ class AuthController extends ChangeNotifier {
       final response = await _authRepository.login(phone, otp);
       if (response.data != null) {
         final data = response.data!;
-        await _storage.write('accessToken', data['accessToken']);
-        await _storage.write('refreshToken', data['refreshToken']);
-        await _storage.write('role', data['role']);
-        await _storage.write('isLoggedIn', true);
+        // Securely store tokens and role
+        await _secureStorage.write(
+          key: 'accessToken',
+          value: data['accessToken'],
+        );
+        await _secureStorage.write(
+          key: 'refreshToken',
+          value: data['refreshToken'],
+        );
+        await _secureStorage.write(key: 'role', value: data['role']);
+        await _secureStorage.write(key: 'isLoggedIn', value: 'true');
+
+        _isLoggedIn = true;
         return true;
       }
       return false;
@@ -110,9 +135,19 @@ class AuthController extends ChangeNotifier {
   }
 
   void logout() async {
-    await _storage.erase();
+    // Clear secure storage
+    await _secureStorage.deleteAll();
+    // Clear relevant GetStorage if needed (e.g. user preferences, but maybe keep resendAttempts)
+    // _storage.erase(); // Be careful erasing all GetStorage if it holds other app data.
+
+    // For now, let's keep _storage.erase() if that was the intent,
+    // BUT usually we don't want to wipe resendAttempts on logout?
+    // The previous code did `_storage.erase()`.
+    // If we want to keep resend attempts persistent across logouts, we should NOT erase.
+    // Assuming we just want to clear auth data:
+    _isLoggedIn = false;
     notifyListeners();
   }
 
-  bool get isLoggedIn => _storage.read('isLoggedIn') ?? false;
+  bool get isLoggedIn => _isLoggedIn;
 }
