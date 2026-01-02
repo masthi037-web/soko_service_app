@@ -57,4 +57,17 @@ class HomeController extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  List<Company> getSuggestions(String query) {
+    if (query.isEmpty) {
+      return const [];
+    }
+    return _stores
+        .where(
+          (store) =>
+              store.companyName != null &&
+              store.companyName!.toLowerCase().contains(query.toLowerCase()),
+        )
+        .toList();
+  }
 }

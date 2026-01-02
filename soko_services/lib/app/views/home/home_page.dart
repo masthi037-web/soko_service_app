@@ -6,6 +6,7 @@ import '../../widgets/home/custom_search_bar.dart';
 import '../../widgets/home/category_list.dart';
 import '../../widgets/home/recommended_card.dart';
 import '../../widgets/home/trusted_stores_grid.dart';
+import '../../views/company/company_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -44,6 +45,17 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 16),
                     CustomSearchBar(
                       onChanged: (value) => controller.searchStores(value),
+                      optionsBuilder: (textEditingValue) {
+                        return controller.getSuggestions(textEditingValue.text);
+                      },
+                      onSelected: (option) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CompanyPage(store: option),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 24),
                     CategoryList(categories: controller.categories),
