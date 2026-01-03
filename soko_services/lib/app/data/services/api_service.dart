@@ -1,3 +1,4 @@
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../models/api_response.dart';
@@ -39,13 +40,55 @@ class ApiService {
   // generic method to handle List API calls
   Future<ApiResponse<List<T>>> handleListApiCall<T>(
     Future<Response> Function() apiCall,
-    T Function(dynamic) fromJson,
-  ) async {
+    T Function(dynamic) fromJson, {
+    String? cacheKey,
+    Duration? cacheDuration,
+  }) async {
+    // 1. Check Cache
+    if (cacheKey != null) {
+      try {
+        final box = Hive.box('api_cache');
+        final cachedData = box.get(cacheKey);
+
+        if (cachedData != null) {
+          final timestamp = cachedData['timestamp'] as int;
+          final savedTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
+          final now = DateTime.now();
+
+          if (now.difference(savedTime) < (cacheDuration ?? Duration.zero)) {
+            debugPrint('Returning cached data for $cacheKey');
+            final List<dynamic> jsonList = cachedData['data'];
+            final List<T> dataList = jsonList
+                .map((json) => fromJson(json as Map<String, dynamic>))
+                .toList();
+            return ApiResponse.success(dataList);
+          }
+        }
+      } catch (e) {
+        debugPrint('Cache Error: $e');
+      }
+    }
+
+    // 2. Network Call
     try {
       final response = await apiCall();
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> jsonList = response.data;
+
+        // 3. Save to Cache
+        if (cacheKey != null) {
+          try {
+            final box = Hive.box('api_cache');
+            await box.put(cacheKey, {
+              'data': jsonList,
+              'timestamp': DateTime.now().millisecondsSinceEpoch,
+            });
+          } catch (e) {
+            debugPrint('Error saving to cache: $e');
+          }
+        }
+
         final List<T> dataList = jsonList
             .map((json) => fromJson(json as Map<String, dynamic>))
             .toList();
@@ -89,6 +132,8 @@ class ApiService {
     T Function(dynamic) fromJson, {
     Map<String, dynamic>? queryParameters,
     CancelToken? cancelToken,
+    String? cacheKey,
+    Duration? cacheDuration,
   }) async {
     return handleListApiCall<T>(
       () => _apiProvider.get(
@@ -97,6 +142,8 @@ class ApiService {
         cancelToken: cancelToken,
       ),
       fromJson,
+      cacheKey: cacheKey,
+      cacheDuration: cacheDuration,
     );
   }
 

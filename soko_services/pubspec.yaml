@@ -41,6 +41,8 @@ dependencies:
   # cupertino_icons duplicate removed
   provider: ^6.1.5+1
   url_launcher: ^6.3.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
   # http: ^1.6.0 # Keeping or removing, user wanted switch. Let's keep cleaning.
 
 

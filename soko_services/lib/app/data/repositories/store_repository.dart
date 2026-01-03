@@ -33,6 +33,8 @@ class StoreRepository {
       (json) => Company.fromJson(json),
       queryParameters: queryParameters.isNotEmpty ? queryParameters : null,
       cancelToken: _cancelToken,
+      cacheKey: 'stores_list',
+      cacheDuration: const Duration(minutes: 10),
     );
   }
 

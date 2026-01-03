@@ -10,8 +10,15 @@ import 'app/controllers/home_controller.dart';
 import 'app/controllers/auth_controller.dart';
 import 'app/views/auth/login_page.dart';
 
+import 'package:hive_flutter/hive_flutter.dart';
+import 'app/data/services/wishlist_service.dart';
+import 'app/controllers/wishlist_controller.dart';
+
 void main() async {
   await GetStorage.init();
+  await Hive.initFlutter();
+  await Hive.openBox('api_cache');
+  await Hive.openBox('wishlist_stores'); // Open wishlist box
   runApp(const MyApp());
 }
 
@@ -23,6 +30,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider(create: (_) => ApiProvider()),
+        Provider(create: (_) => WishlistService()), // WishlistService
         ProxyProvider<ApiProvider, ApiService>(
           update: (_, apiProvider, __) => ApiService(apiProvider),
         ),
@@ -45,6 +53,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProxyProvider<AuthRepository, AuthController>(
           create: (context) => AuthController(context.read<AuthRepository>()),
           update: (_, repo, previous) => AuthController(repo),
+        ),
+        ChangeNotifierProxyProvider<WishlistService, WishlistController>(
+          create: (context) =>
+              WishlistController(context.read<WishlistService>()),
+          update: (_, service, previous) => WishlistController(service),
         ),
       ],
       child: MaterialApp(
