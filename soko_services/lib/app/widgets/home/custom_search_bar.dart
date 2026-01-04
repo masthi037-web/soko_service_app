@@ -59,117 +59,159 @@ class CustomSearchBar extends StatelessWidget {
                                   color: Colors.grey.withValues(alpha: 0.1),
                                 ),
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: ListView.separated(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                                    child: Text(
+                                      'BRANDS',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey,
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
                                   ),
-                                  shrinkWrap: true,
-                                  itemCount: options.length,
-                                  separatorBuilder: (context, index) => Divider(
-                                    height: 1,
-                                    color: Colors.grey.withValues(alpha: 0.1),
-                                  ),
-                                  itemBuilder: (BuildContext context, int index) {
-                                    final Company option = options.elementAt(
-                                      index,
-                                    );
-                                    return ListTile(
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 8,
-                                          ),
-                                      leading: Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          color: Colors.teal.shade50,
-                                          shape: BoxShape.circle,
-                                          image:
-                                              option.logo != null &&
-                                                  option.logo!.isNotEmpty
-                                              ? DecorationImage(
-                                                  image: NetworkImage(
-                                                    option.logo!,
-                                                  ),
-                                                  fit: BoxFit.cover,
-                                                )
-                                              : null,
+                                  Flexible(
+                                    child: RawScrollbar(
+                                      thumbVisibility: true,
+                                      thumbColor: Colors.grey[400],
+                                      radius: const Radius.circular(20),
+                                      thickness: 4,
+                                      mainAxisMargin: 4,
+                                      child: ListView.separated(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 8,
                                         ),
-                                        child:
-                                            option.logo == null ||
-                                                option.logo!.isEmpty
-                                            ? const Icon(
-                                                Icons.store_rounded,
-                                                color: Colors.teal,
-                                                size: 24,
-                                              )
-                                            : null,
-                                      ),
-                                      title: Text(
-                                        option.companyName ?? '',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      subtitle: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Founder: ${option.ownerName ?? 'Unknown'}',
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
-                                              fontSize: 12,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                      trailing: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.orange.shade50,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(
-                                              Icons.star_rounded,
-                                              color: Colors.orange,
-                                              size: 16,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              (option.averageRating ?? 0.0)
-                                                  .toStringAsFixed(1),
-                                              style: TextStyle(
-                                                color: Colors.orange.shade800,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 12,
+                                        shrinkWrap: true,
+                                        physics: const ClampingScrollPhysics(),
+                                        itemCount: options.length,
+                                        separatorBuilder: (context, index) =>
+                                            Divider(
+                                              height: 1,
+                                              color: Colors.grey.withValues(
+                                                alpha: 0.1,
                                               ),
+                                              indent:
+                                                  16, // Indent for cleaner look
+                                              endIndent: 16,
                                             ),
-                                          ],
-                                        ),
+                                        itemBuilder:
+                                            (BuildContext context, int index) {
+                                              final Company option = options
+                                                  .elementAt(index);
+                                              return ListTile(
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 4,
+                                                    ),
+                                                leading: Container(
+                                                  width: 40,
+                                                  height: 40,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.teal.shade50,
+                                                    shape: BoxShape.circle,
+                                                    image:
+                                                        option.logo != null &&
+                                                            option
+                                                                .logo!
+                                                                .isNotEmpty
+                                                        ? DecorationImage(
+                                                            image: NetworkImage(
+                                                              option.logo!,
+                                                            ),
+                                                            fit: BoxFit.cover,
+                                                          )
+                                                        : null,
+                                                  ),
+                                                  child:
+                                                      option.logo == null ||
+                                                          option.logo!.isEmpty
+                                                      ? const Icon(
+                                                          Icons.store_rounded,
+                                                          color: Colors.teal,
+                                                          size: 20,
+                                                        )
+                                                      : null,
+                                                ),
+                                                title: Text(
+                                                  option.companyName ?? '',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                subtitle: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      'Founder: ${option.ownerName ?? 'Unknown'}',
+                                                      style: TextStyle(
+                                                        color: Colors.grey[600],
+                                                        fontSize: 12,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ],
+                                                ),
+                                                trailing: Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        Colors.orange.shade50,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.star_rounded,
+                                                        color: Colors.orange,
+                                                        size: 16,
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        (option.averageRating ??
+                                                                0.0)
+                                                            .toStringAsFixed(1),
+                                                        style: TextStyle(
+                                                          color: Colors
+                                                              .orange
+                                                              .shade800,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                onTap: () {
+                                                  onSelected(option);
+                                                },
+                                              );
+                                            },
                                       ),
-                                      onTap: () {
-                                        onSelected(option);
-                                      },
-                                    );
-                                  },
-                                ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -206,7 +248,6 @@ class CustomSearchBar extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 12),
         const SizedBox(width: 12),
         GestureDetector(
           onTap: onFilterTap,
